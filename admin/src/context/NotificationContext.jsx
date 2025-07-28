@@ -10,11 +10,14 @@ export const NotificationProvider = ({ children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [socket, setSocket] = useState(null);
 
+    // ✅ Get backend URL from env or fallback
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
     useEffect(() => {
         if (token && userData) {
-            // Connect to WebSocket
-            const newSocket = io('http://localhost:4000', {
-                withCredentials: true
+            // ✅ Connect to WebSocket using backendUrl
+            const newSocket = io(backendUrl, {
+                withCredentials: true,
             });
 
             // Authenticate socket with user ID
@@ -23,41 +26,36 @@ export const NotificationProvider = ({ children }) => {
             // Listen for new notifications
             newSocket.on('newNotification', (notification) => {
                 console.log('New notification received:', notification);
-                setNotifications(prev => [notification, ...prev]);
-                setUnreadCount(prev => prev + 1);
+                setNotifications((prev) => [notification, ...prev]);
+                setUnreadCount((prev) => prev + 1);
             });
 
-            // Listen for notification updates
             newSocket.on('notificationRead', (notificationId) => {
-                setNotifications(prev => 
-                    prev.map(notif => 
-                        notif._id === notificationId 
-                            ? { ...notif, read: true } 
-                            : notif
+                setNotifications((prev) =>
+                    prev.map((notif) =>
+                        notif._id === notificationId ? { ...notif, read: true } : notif
                     )
                 );
-                setUnreadCount(prev => Math.max(0, prev - 1));
+                setUnreadCount((prev) => Math.max(0, prev - 1));
             });
 
             newSocket.on('allNotificationsRead', () => {
-                setNotifications(prev => 
-                    prev.map(notif => ({ ...notif, read: true }))
-                );
+                setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
                 setUnreadCount(0);
             });
 
             newSocket.on('notificationDeleted', (notificationId) => {
-                setNotifications(prev => 
-                    prev.filter(notif => notif._id !== notificationId)
+                setNotifications((prev) =>
+                    prev.filter((notif) => notif._id !== notificationId)
                 );
-                setUnreadCount(prev => 
-                    prev - (notifications.find(n => n._id === notificationId && !n.read) ? 1 : 0)
+                setUnreadCount((prev) =>
+                    prev - (notifications.find((n) => n._id === notificationId && !n.read) ? 1 : 0)
                 );
             });
 
             setSocket(newSocket);
 
-            // Fetch existing notifications
+            // Fetch initial notifications
             fetchNotifications();
 
             return () => {
@@ -68,10 +66,10 @@ export const NotificationProvider = ({ children }) => {
 
     const fetchNotifications = async () => {
         try {
-            const response = await fetch('http://localhost:4000/api/notifications', {
+            const response = await fetch(`${backendUrl}/api/notifications`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
             const data = await response.json();
             if (data.status === 'success') {
@@ -85,22 +83,20 @@ export const NotificationProvider = ({ children }) => {
 
     const markAsRead = async (notificationId) => {
         try {
-            const response = await fetch(`http://localhost:4000/api/notifications/${notificationId}/read`, {
+            const response = await fetch(`${backendUrl}/api/notifications/${notificationId}/read`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
             const data = await response.json();
             if (data.status === 'success') {
-                setNotifications(prev => 
-                    prev.map(notif => 
-                        notif._id === notificationId 
-                            ? { ...notif, read: true } 
-                            : notif
+                setNotifications((prev) =>
+                    prev.map((notif) =>
+                        notif._id === notificationId ? { ...notif, read: true } : notif
                     )
                 );
-                setUnreadCount(prev => Math.max(0, prev - 1));
+                setUnreadCount((prev) => Math.max(0, prev - 1));
             }
         } catch (error) {
             console.error('Error marking notification as read:', error);
@@ -109,17 +105,15 @@ export const NotificationProvider = ({ children }) => {
 
     const markAllAsRead = async () => {
         try {
-            const response = await fetch('http://localhost:4000/api/notifications/mark-all-read', {
+            const response = await fetch(`${backendUrl}/api/notifications/mark-all-read`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
             const data = await response.json();
             if (data.status === 'success') {
-                setNotifications(prev => 
-                    prev.map(notif => ({ ...notif, read: true }))
-                );
+                setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
                 setUnreadCount(0);
             }
         } catch (error) {
@@ -128,15 +122,15 @@ export const NotificationProvider = ({ children }) => {
     };
 
     return (
-        <NotificationContext.Provider 
-            value={{ 
-                notifications, 
-                unreadCount, 
-                markAsRead, 
-                markAllAsRead 
+        <NotificationContext.Provider
+            value={{
+                notifications,
+                unreadCount,
+                markAsRead,
+                markAllAsRead,
             }}
         >
             {children}
         </NotificationContext.Provider>
     );
-}; 
+};

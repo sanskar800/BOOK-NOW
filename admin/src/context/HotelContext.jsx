@@ -8,28 +8,24 @@ export const HotelContext = createContext();
 const HotelContextProvider = (props) => {
     const [hToken, setHToken] = useState(localStorage.getItem('hToken') || null);
     const [hotelData, setHotelData] = useState(null);
-    const backendUrl = 'http://localhost:4000';
+
+    // ✅ Use env variable for backend
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
+    // ✅ Set axios base URL globally
+    axios.defaults.baseURL = backendUrl;
+
     const navigate = useNavigate();
 
-    // Set up axios defaults whenever token changes
+    // ✅ Use effect: set token headers & interceptor once when token changes
     useEffect(() => {
         if (hToken) {
-            // Set token in axios defaults for all requests
             axios.defaults.headers.common['hToken'] = hToken;
             axios.defaults.headers.common['Authorization'] = `Bearer ${hToken}`;
-            
-            // Also configure axios to send these headers with all requests
-            axios.interceptors.request.use(config => {
-                config.headers = config.headers || {};
-                config.headers['hToken'] = hToken;
-                config.headers['Authorization'] = `Bearer ${hToken}`;
-                return config;
-            });
-            
-            console.log('Set default axios headers with hotel token');
-            
-            // Immediately try to get hotel data
-            getHotelDetails().then(response => {
+
+            console.log('HotelContext - Set default axios headers with hotel token');
+
+            getHotelDetails().then((response) => {
                 if (response.success) {
                     console.log('Loaded hotel data on context initialization');
                 }
@@ -43,23 +39,15 @@ const HotelContextProvider = (props) => {
     const getHotelDetails = async () => {
         try {
             console.log('Fetching hotel details with token:', hToken);
-            
-            const { data } = await axios.get(`${backendUrl}/api/hotel/details`, {
-                headers: { 
-                    'hToken': hToken,
-                    'Authorization': `Bearer ${hToken}`
-                }
-            });
-            
+
+            const { data } = await axios.get('/api/hotel/details'); // ✅ No full URL needed
+
             console.log('Hotel details response:', data);
-            
+
             if (data.success) {
                 console.log('Setting hotel data:', data.hotel);
                 setHotelData(data.hotel);
-                return {
-                    success: true,
-                    hotel: data.hotel
-                };
+                return { success: true, hotel: data.hotel };
             } else {
                 toast.error(data.message);
                 if (data.message.includes('Not Authorized')) {
@@ -67,9 +55,7 @@ const HotelContextProvider = (props) => {
                     setHToken(null);
                     navigate('/login');
                 }
-                return {
-                    success: false
-                };
+                return { success: false };
             }
         } catch (error) {
             console.error('Error fetching hotel details:', error);
@@ -79,25 +65,18 @@ const HotelContextProvider = (props) => {
                 setHToken(null);
                 navigate('/login');
             }
-            return {
-                success: false
-            };
+            return { success: false };
         }
     };
 
     const getHotelBookings = async () => {
         try {
             console.log('Fetching hotel bookings with token:', hToken);
-            
-            const { data } = await axios.get(`${backendUrl}/api/hotel/bookings`, {
-                headers: { 
-                    'hToken': hToken,
-                    'Authorization': `Bearer ${hToken}`
-                }
-            });
-            
+
+            const { data } = await axios.get('/api/hotel/bookings'); // ✅ No full URL needed
+
             console.log('Hotel bookings response:', data);
-            
+
             if (data.success) {
                 return { success: true, bookings: data.bookings };
             } else {
@@ -113,13 +92,8 @@ const HotelContextProvider = (props) => {
 
     const cancelBooking = async (bookingId) => {
         try {
-            const { data } = await axios.delete(`${backendUrl}/api/hotel/bookings/${bookingId}`, {
-                headers: { 
-                    'hToken': hToken,
-                    'Authorization': `Bearer ${hToken}`
-                }
-            });
-            
+            const { data } = await axios.delete(`/api/hotel/bookings/${bookingId}`); // ✅ No full URL needed
+
             if (data.success) {
                 toast.success('Booking cancelled successfully. A notification has been sent to the guest.');
                 return true;
@@ -139,7 +113,6 @@ const HotelContextProvider = (props) => {
         setHToken,
         hotelData,
         setHotelData,
-        backendUrl,
         getHotelDetails,
         getHotelBookings,
         cancelBooking,

@@ -8,7 +8,13 @@ export const AdminContext = createContext();
 const AdminContextProvider = (props) => {
     const [aToken, setAToken] = useState(localStorage.getItem('aToken') || null);
     const [hotels, setHotels] = useState([]);
-    const backendUrl = 'http://localhost:4000';
+
+    // ✅ Use env variable OR fallback
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
+    // ✅ Set axios base URL globally so you don't repeat it
+    axios.defaults.baseURL = backendUrl;
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -23,9 +29,7 @@ const AdminContextProvider = (props) => {
     const getAllHotels = async () => {
         try {
             console.log('AdminContext - Fetching hotels with aToken:', aToken);
-            const { data } = await axios.get(`${backendUrl}/api/admin/all-hotels`, {
-                headers: { atoken: aToken }, // Changed to lowercase
-            });
+            const { data } = await axios.get('/api/admin/all-hotels'); // ✅ Only the path!
             console.log('AdminContext - getAllHotels response:', data);
             if (data.success) {
                 setHotels(data.hotels);
@@ -48,9 +52,7 @@ const AdminContextProvider = (props) => {
     const changeAvailability = async (hotId) => {
         try {
             console.log('AdminContext - Changing availability with aToken:', aToken);
-            const { data } = await axios.post(`${backendUrl}/api/admin/change-availability`, { hotId }, {
-                headers: { atoken: aToken }, // Changed to lowercase
-            });
+            const { data } = await axios.post('/api/admin/change-availability', { hotId }); // ✅ Only the path!
             console.log('AdminContext - changeAvailability response:', data);
             if (data.success) {
                 toast.success(data.message);
@@ -77,7 +79,6 @@ const AdminContextProvider = (props) => {
         setAToken,
         hotels,
         setHotels,
-        backendUrl,
         getAllHotels,
         changeAvailability
     };
