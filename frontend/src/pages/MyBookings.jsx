@@ -10,8 +10,7 @@ import { assets } from "../assets/assets.js";
 import ReviewForm from "../components/ReviewForm";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-const backendUrl = "http://localhost:4000";
-
+const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 // Simple debounce function to prevent multiple rapid clicks
 function debounce(func, wait) {
   let timeout;
@@ -206,19 +205,19 @@ const MyBookings = () => {
     try {
       const currentToken = token || localStorage.getItem("token");
       if (!currentToken) throw new Error("No token available");
-      
+
       // Add status parameter to API request if filter is not "All" or "Completed"
       // For "Completed", we need all Active bookings to filter by date on the frontend
       const params = {};
       if (filter !== "All" && filter !== "Completed") {
         params.status = filter;
       }
-      
+
       const response = await axios.get(`${backendUrl}/api/booking/my-bookings`, {
         headers: { token: currentToken },
         params
       });
-      
+
       if (response.data.success) {
         setBookings(response.data.bookings || []);
       } else {
@@ -251,8 +250,8 @@ const MyBookings = () => {
   const handlePayOnline = useCallback(async (booking) => {
     try {
       // Disable this specific button
-      setPaymentButtonsDisabled(prev => ({...prev, [booking._id]: true}));
-      
+      setPaymentButtonsDisabled(prev => ({ ...prev, [booking._id]: true }));
+
       // Update UI immediately to show loading
       setPaymentState((prev) => ({
         ...prev,
@@ -265,7 +264,7 @@ const MyBookings = () => {
       const { data } = await axios.post(
         `${backendUrl}/api/booking/bookings/${booking._id}/pay-online`,
         {},
-        { 
+        {
           headers: { token: token || localStorage.getItem("token") },
           // Add a timeout to prevent hanging requests
           timeout: 10000
@@ -297,7 +296,7 @@ const MyBookings = () => {
     } finally {
       // Re-enable the button after 1.5 seconds to prevent accidental double-clicks
       setTimeout(() => {
-        setPaymentButtonsDisabled(prev => ({...prev, [booking._id]: false}));
+        setPaymentButtonsDisabled(prev => ({ ...prev, [booking._id]: false }));
       }, 1500);
     }
   }, [token, backendUrl]);
@@ -371,19 +370,19 @@ const MyBookings = () => {
   const handleConfirmCancellation = async () => {
     try {
       setCancelLoading(true);
-      
+
       // Optimistic UI update - update locally first
-      setBookings(prevBookings => 
-        prevBookings.map(booking => 
-          booking._id === selectedBookingId 
-            ? { ...booking, status: 'Cancelled', cancelledAt: new Date(), cancelledBy: 'user' } 
+      setBookings(prevBookings =>
+        prevBookings.map(booking =>
+          booking._id === selectedBookingId
+            ? { ...booking, status: 'Cancelled', cancelledAt: new Date(), cancelledBy: 'user' }
             : booking
         )
       );
-      
+
       const response = await axios.delete(
         `${backendUrl}/api/booking/bookings/${selectedBookingId}`,
-        { 
+        {
           headers: { token: token || localStorage.getItem("token") },
           data: { cancellationReason }
         }
@@ -453,7 +452,7 @@ const MyBookings = () => {
         acc.cancelled.push(booking);
         return acc;
       }
-      
+
       const checkOutDate = new Date(booking.checkOutDate);
       checkOutDate.setHours(0, 0, 0, 0);
       const checkInDate = new Date(booking.checkInDate);
@@ -464,16 +463,16 @@ const MyBookings = () => {
       // Completed: Check-out date is in the past
       if (checkOutDate < today) {
         acc.completed.push(booking);
-      } 
+      }
       // Active: Check-in date is today or in the past AND check-out date is today or in the future
       else if (checkInDate <= today && checkOutDate >= today) {
         acc.active.push(booking);
-      } 
+      }
       // Upcoming: Check-in date is in the future
       else if (checkInDate > today) {
         acc.upcoming.push(booking);
       }
-      
+
       return acc;
     }, { completed: [], upcoming: [], active: [], cancelled: [] });
 
@@ -483,7 +482,7 @@ const MyBookings = () => {
 
   const formatCancelledInfo = (booking) => {
     if (!booking.cancelledAt) return null;
-    
+
     const cancelDate = new Date(booking.cancelledAt);
     const formattedDate = new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -493,9 +492,9 @@ const MyBookings = () => {
       minute: 'numeric',
       hour12: true
     }).format(cancelDate);
-    
+
     let cancelledBy = 'Unknown';
-    switch(booking.cancelledBy) {
+    switch (booking.cancelledBy) {
       case 'user':
         cancelledBy = 'You';
         break;
@@ -508,7 +507,7 @@ const MyBookings = () => {
       default:
         cancelledBy = 'System';
     }
-    
+
     return `Cancelled by ${cancelledBy} on ${formattedDate}`;
   };
 
@@ -534,7 +533,7 @@ const MyBookings = () => {
     <div className="max-w-6xl mx-auto bg-gray-50 min-h-screen p-6">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">My Bookings</h1>
-        
+
         <div className="flex items-center gap-3">
           <label htmlFor="booking-filter" className="text-gray-600 font-medium">
             Filter:
@@ -551,7 +550,7 @@ const MyBookings = () => {
             <option value="Completed">Past Bookings</option>
             <option value="Cancelled">Cancelled Bookings</option>
           </select>
-          
+
           <button
             onClick={fetchBookings}
             className="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 transition-colors"
@@ -563,7 +562,7 @@ const MyBookings = () => {
           </button>
         </div>
       </div>
-      
+
       {bookings.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="flex flex-col items-center justify-center py-16">
@@ -594,7 +593,7 @@ const MyBookings = () => {
         <div className="space-y-8">
           {Object.entries(categorizeBookings()).map(([category, categoryBookings]) => {
             console.log(`Rendering category ${category} with ${categoryBookings.length} bookings, current filter: ${filter}`);
-            
+
             // Skip rendering if this category doesn't match the current filter
             if (filter === "Active" && category !== "active") {
               return null;
@@ -608,7 +607,7 @@ const MyBookings = () => {
             if (filter === "Cancelled" && category !== "cancelled") {
               return null;
             }
-            
+
             // Only render if there are bookings in this category
             return categoryBookings.length > 0 && (
               <div key={category} className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -660,7 +659,7 @@ const MyBookings = () => {
                     )}
                   </h2>
                 </div>
-                
+
                 {categoryBookings.map((booking, index) => (
                   <div
                     key={booking._id || index}
@@ -671,7 +670,7 @@ const MyBookings = () => {
                         <div className="bg-red-500 text-white px-6 py-1 text-sm font-bold shadow-md">
                           CANCELLED
                         </div>
-                      </div>  
+                      </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-6 p-6 hover:bg-gray-50 transition-all">
                       <div className="flex justify-center md:justify-start">
@@ -709,7 +708,7 @@ const MyBookings = () => {
                               </div>
                             </div>
                           )}
-                          
+
                           {category !== 'cancelled' && (
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
                               <span className="text-white font-medium text-sm">
@@ -782,13 +781,12 @@ const MyBookings = () => {
                           <div>
                             <p className="text-xs text-gray-500">Payment Status</p>
                             <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                booking.paymentStatus === "Completed"
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.paymentStatus === "Completed"
                                   ? "bg-green-100 text-green-800"
                                   : booking.paymentStatus === "Failed"
                                     ? "bg-red-100 text-red-800"
                                     : "bg-yellow-100 text-yellow-800"
-                              }`}
+                                }`}
                             >
                               {booking.paymentStatus}
                             </span>
@@ -817,16 +815,15 @@ const MyBookings = () => {
 
                       <div className="flex flex-col gap-3 md:justify-center">
                         {booking.paymentOption === "pay_later" &&
-                          !paymentState[booking._id]?.showForm && 
-                          category !== "completed" && 
+                          !paymentState[booking._id]?.showForm &&
+                          category !== "completed" &&
                           booking.status !== "Cancelled" && (
                             <button
                               onClick={() => debouncedHandlePayOnline(booking)}
-                              className={`text-sm text-white bg-blue-600 hover:bg-blue-700 text-center py-3 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center ${
-                                paymentState[booking._id]?.isLoading || paymentButtonsDisabled[booking._id] 
-                                  ? "opacity-70 cursor-not-allowed" 
+                              className={`text-sm text-white bg-blue-600 hover:bg-blue-700 text-center py-3 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center ${paymentState[booking._id]?.isLoading || paymentButtonsDisabled[booking._id]
+                                  ? "opacity-70 cursor-not-allowed"
                                   : ""
-                              }`}
+                                }`}
                               disabled={paymentState[booking._id]?.isLoading || paymentButtonsDisabled[booking._id]}
                             >
                               {paymentState[booking._id]?.isLoading ? (
@@ -942,10 +939,10 @@ const MyBookings = () => {
                                       Review your stay
                                     </h3>
                                     <div className="mt-4">
-                                      <ReviewForm 
-                                        bookingId={booking._id} 
+                                      <ReviewForm
+                                        bookingId={booking._id}
                                         hotelName={booking.hotelId?.name || "Unknown Hotel"}
-                                        onReviewSubmitted={handleReviewSubmitted} 
+                                        onReviewSubmitted={handleReviewSubmitted}
                                       />
                                     </div>
                                   </div>
