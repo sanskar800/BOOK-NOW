@@ -116,6 +116,7 @@ const HotelContextProvider = (props) => {
         getHotelDetails,
         getHotelBookings,
         cancelBooking,
+        backendUrl,
     };
 
     return <HotelContext.Provider value={value}>{props.children}</HotelContext.Provider>;

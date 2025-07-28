@@ -80,7 +80,8 @@ const AdminContextProvider = (props) => {
         hotels,
         setHotels,
         getAllHotels,
-        changeAvailability
+        changeAvailability,
+        backendUrl,
     };
 
     return <AdminContext.Provider value={value}>{props.children}</AdminContext.Provider>;
